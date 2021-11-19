@@ -1,48 +1,31 @@
-import { Component } from 'react';
+import { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { alert} from '@pnotify/core';
-// import '@pnotify/core/dist/PNotify.css';
+import { alert } from '@pnotify/core';
+
 import '@pnotify/core/dist/BrightTheme.css';
 import s from './App.module.css'
-
 import Form from './components/Form';
 import ContactsList from './components/ContactsList';
 import Filter from './components/Filter';
 
+const useLocalStorage = (key, defaultValue) => {
+   const [state, setState] = useState(() => {
+       return JSON.parse(window.localStorage.getItem(key)) ?? defaultValue
+   });
+    return [state, setState]
+};
 
-class App extends Component{
-state = {
-  contacts: [
-    {id: 'id-1', name: 'Rosie Simpson', number: '459-12-56'},
-    {id: 'id-2', name: 'Hermione Kline', number: '443-89-12'},
-    {id: 'id-3', name: 'Eden Clements', number: '645-17-79'},
-    {id: 'id-4', name: 'Annie Copeland', number: '227-91-26'},
-  ],
-  filter:'',
-  }
-  
-  componentDidMount() {
-    const contacts = localStorage.getItem('contacts');
-    const parsedContacts = JSON.parse(contacts);
-    if (parsedContacts) {
-      this.setState({ contacts: parsedContacts })
-    }
-    
-  }
-  
-  componentDidUpdate(prevProps, prevState) {
-    if (this.state.contacts !== prevProps.contacts) {
-      localStorage.setItem('contacts', JSON.stringify(this.state.contacts))
-    }
-  }
-
-  deleteContact = (contactId) => {
-    this.setState(prevState => ({
-      contacts: prevState.contacts.filter(contact => contact.id !== contactId),
-    }));
-  };
-  
-  addContact = ({ name, number }) => {
+export default function App() {
+    const [contacts, setContacts] = useLocalStorage('contacts', [
+        { id: 'id-1', name: 'Rosie Simpson', number: '459-12-56' },
+        { id: 'id-2', name: 'Hermione Kline', number: '443-89-12' },
+        { id: 'id-3', name: 'Eden Clements', number: '645-17-79' },
+        { id: 'id-4', name: 'Annie Copeland', number: '227-91-26' },
+    ]);
+     
+    const [filter, setFilter] = useState('');
+ 
+    const addContact = ({ name, number }) => {
     const contact = {
       id: uuidv4(),
       name,
@@ -51,33 +34,36 @@ state = {
 
     const normolizedName = name.toLowerCase();
 
-    if (this.state.contacts.find(contact => contact.name.toLowerCase() === normolizedName)) {
+    if (contacts.find(contact => contact.name.toLowerCase() === normolizedName)) {
       return alert(`${name} is already in contacts`);
-    };  
-    
-    this.setState(prevState => ({
-      contacts: [contact, ...prevState.contacts],
-    }));
-  };
-
-  changeFilter = (e) => {
-    this.setState({ filter: e.currentTarget.value });
-  };
-
-  getVisibleContacts = () => {
-    const { contacts, filter } = this.state;
-    const normolizedFitres = filter.toLowerCase();
-    return contacts.filter(contact =>
-      contact.name.toLowerCase().includes(normolizedFitres),
-    );    
-  };
-
-    
-  render() {
-    const {filter} = this.state;
-    const { addContact, deleteContact, changeFilter} = this;
-    const visibleContacts = this.getVisibleContacts();
+        };
         
+        setContacts(prevContacts => [contact, ...prevContacts]
+        );    
+    };   
+
+    const changeFilter = (e) => {
+    setFilter(e.currentTarget.value);
+    };
+    
+    const deleteContact = (contactId) => {
+        setContacts(prevContacts=>prevContacts.filter(contact => contact.id !== contactId))
+    };
+
+   const getVisibleContacts = () => {
+    const normalizedFilter = filter.toLowerCase();
+    const visibleContacts = contacts.filter(contact =>
+        contact.name.toLowerCase().includes(normalizedFilter)
+       );
+       return visibleContacts;
+    };
+    
+    const visibleContacts = getVisibleContacts();
+    
+    useEffect(() => {
+        localStorage.setItem('contacts', JSON.stringify(contacts))
+    }, [contacts]);
+
     return (
       <div className={s.container}>
         <h1>Phonebook</h1>
@@ -91,8 +77,4 @@ state = {
           onDeleteContact={deleteContact} />
       </div>
    );
- }
-
-}
-
-export default App;
+};
